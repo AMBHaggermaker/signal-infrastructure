@@ -1,0 +1,19 @@
+tunnel: <YOUR_TUNNEL_ID>
+credentials-file: C:\Users\<USERNAME>\.cloudflared\<YOUR_TUNNEL_ID>.json
+
+ingress:
+  - hostname: unprecedentedtimes.org
+    service: http://127.0.0.1:2368
+  - hostname: www.unprecedentedtimes.org
+    service: http://127.0.0.1:2368
+  - hostname: mycelium.unprecedentedtimes.org
+    path: /api/.*
+    service: http://127.0.0.1:3001
+  - hostname: mycelium.unprecedentedtimes.org
+    service: http://127.0.0.1:4200
+  - hostname: lostfound.unprecedentedtimes.org
+    path: /api/.*
+    service: http://127.0.0.1:3002
+  - hostname: lostfound.unprecedentedtimes.org
+    service: http://127.0.0.1:4201
+  - service: http_status:404
