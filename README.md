@@ -10,8 +10,8 @@ Startup scripts, process management config, and tunnel routing for the Unprecede
 | Open WebUI | — | Docker | — |
 | Mycelium API | 3001 | PM2 | [mycelium-backend](https://github.com/AMBHaggermaker/mycelium-backend) |
 | Lost & Found API | 3002 | PM2 | [lostfound-backend](https://github.com/AMBHaggermaker/lostfound-backend) |
-| Mycelium Frontend | 4200 | startup.bat (npx serve) | [mycelium-frontend](https://github.com/AMBHaggermaker/mycelium-frontend) |
-| Lost & Found Frontend | 4201 | startup.bat (npx serve) | [lostfound-frontend](https://github.com/AMBHaggermaker/lostfound-frontend) |
+| Mycelium Frontend | 4200 | Docker (nginx) | [mycelium-frontend](https://github.com/AMBHaggermaker/mycelium-frontend) |
+| Lost & Found Frontend | 4201 | Docker (nginx) | [lostfound-frontend](https://github.com/AMBHaggermaker/lostfound-frontend) |
 | Cloudflare Tunnel | — | startup.bat (cloudflared) | — |
 
 ## Domain Routing (Cloudflare Tunnel)
@@ -40,15 +40,17 @@ C:\Users\User\pm2-startup.bat  →  pm2 resurrect
 ```
 This restores all PM2-managed processes (Mycelium API, Lost & Found API) from the saved dump at `C:\Users\User\.pm2\dump.pm2`.
 
-### 2. startup.bat — Docker + Frontends + Tunnel
+### 2. startup.bat — Docker + Tunnel
 `startup.bat` is also triggered at login and handles everything PM2 doesn't:
 
 1. Waits 60 seconds for Docker Desktop to finish loading
 2. `docker start ghost` — starts Ghost CMS
 3. `docker start open-webui` — starts Open WebUI
-4. `npx serve` — serves Mycelium frontend on :4200
-5. `npx serve` — serves Lost & Found frontend on :4201
-6. `cloudflared tunnel run unprecedented` — opens the Cloudflare tunnel
+4. `docker start frontends` — starts nginx serving both frontends (:4200 and :4201)
+5. `cloudflared tunnel run unprecedented` — opens the Cloudflare tunnel
+6. Launches `cloudflared-watchdog.bat` — checks every 5 minutes, restarts tunnel if down
+
+> **Note:** The `frontends` container has `--restart always`, so Docker will also restart it automatically if it crashes between boots.
 
 ## PM2 Setup
 
@@ -84,6 +86,26 @@ The tunnel credential JSON lives at:
 C:\Users\<USERNAME>\.cloudflared\<YOUR_TUNNEL_ID>.json
 ```
 **Never commit this file.** It is excluded via `.gitignore`.
+
+## Frontend nginx Container
+
+Both React frontends are served by a single nginx:alpine container with two server blocks. Config is in `nginx-config/default.conf`.
+
+To create the container from scratch:
+
+```bash
+docker run -d \
+  --name frontends \
+  --restart always \
+  -p 4200:4200 \
+  -p 4201:4201 \
+  -v "C:\mycelium-app\dist:/usr/share/nginx/html/mycelium:ro" \
+  -v "C:\lostfound-app\dist:/usr/share/nginx/html/lostfound:ro" \
+  -v "C:\nginx-config\default.conf:/etc/nginx/conf.d/default.conf:ro" \
+  nginx:alpine
+```
+
+After rebuilding either frontend (`npm run build`), the new `dist/` is served immediately — no container restart needed since the directory is bind-mounted read-only.
 
 ## Ghost (Docker)
 
