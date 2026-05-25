@@ -8,6 +8,8 @@ module.exports = {
     {
       name: 'lostfound-api',
       script: 'C:\\lostfound\\src\\index.js',
+      cwd: 'C:\\lostfound',
+      node_args: '--env-file C:\\lostfound\\.env',
     },
   ],
 };
